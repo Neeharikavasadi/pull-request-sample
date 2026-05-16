@@ -10,7 +10,7 @@ function CartPage() {
   const [discount, setDiscount] = useState(0);
   const [pointsRedeemed, setPointsRedeemed] = useState(0);
   const userId = getStoredUserId();
-  const availablePoints = Number(localStorage.getItem('loyaltyPoints') || 0);
+  const availablePoints = Number(sessionStorage.getItem('loyaltyPoints') || 0);
 
   useEffect(() => {
     if (userId) {
@@ -111,7 +111,7 @@ function CartPage() {
         pointsRedeemed: pointsRedeemed
       });
       
-      localStorage.setItem('loyaltyPoints', response.updatedLoyaltyPoints);
+      sessionStorage.setItem('loyaltyPoints', response.updatedLoyaltyPoints);
       setCart({ items: [], totalPrice: 0 });
       setMessage('Order placed successfully');
       setTimeout(() => window.location.reload(), 1500);

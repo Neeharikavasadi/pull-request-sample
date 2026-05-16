@@ -9,7 +9,7 @@ import AdminPage from './pages/AdminPage';
 import ManageCategoriesPage from './pages/ManageCategoriesPage';
 
 function App() {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
 
   if (!token) {
     return (
@@ -27,13 +27,13 @@ function App() {
       <Navbar />
       <main>
         <Routes>
-          <Route path="/" element={localStorage.getItem('role') === 'ROLE_ADMIN' ? <Navigate to="/admin" replace /> : <HomePage />} />
+          <Route path="/" element={sessionStorage.getItem('role') === 'ROLE_ADMIN' ? <Navigate to="/admin" replace /> : <HomePage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/admin" element={localStorage.getItem('role') === 'ROLE_ADMIN' ? <AdminPage /> : <Navigate to="/" replace />} />
-          <Route path="/admin/categories" element={localStorage.getItem('role') === 'ROLE_ADMIN' ? <ManageCategoriesPage /> : <Navigate to="/" replace />} />
+          <Route path="/admin" element={sessionStorage.getItem('role') === 'ROLE_ADMIN' ? <AdminPage /> : <Navigate to="/" replace />} />
+          <Route path="/admin/categories" element={sessionStorage.getItem('role') === 'ROLE_ADMIN' ? <ManageCategoriesPage /> : <Navigate to="/" replace />} />
           <Route path="/404" element={<NotFoundPage />} />
-          <Route path="*" element={<Navigate to={localStorage.getItem('role') === 'ROLE_ADMIN' ? "/admin" : "/"} replace />} />
+          <Route path="*" element={<Navigate to={sessionStorage.getItem('role') === 'ROLE_ADMIN' ? "/admin" : "/"} replace />} />
         </Routes>
       </main>
     </div>

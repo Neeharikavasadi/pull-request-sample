@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom';
 
 function Navbar() {
-  const username = localStorage.getItem('username');
-  const points = localStorage.getItem('loyaltyPoints');
-  const role = localStorage.getItem('role');
+  const username = sessionStorage.getItem('username');
+  const points = sessionStorage.getItem('loyaltyPoints');
+  const role = sessionStorage.getItem('role');
 
   const handleLogout = () => {
-    localStorage.clear();
+    sessionStorage.clear();
     window.location.href = '/auth';
   };
 

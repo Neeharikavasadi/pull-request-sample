@@ -104,7 +104,7 @@ function AdminPage() {
   };
 
   const handleDeleteProduct = async (productId) => {
-    console.log('AdminPage.delete', { productId, token: localStorage.getItem('token') });
+    console.log('AdminPage.delete', { productId, token: sessionStorage.getItem('token') });
     if (!productId) {
       showMessage('Invalid product selected', true);
       return;
@@ -121,7 +121,7 @@ function AdminPage() {
         const status = error.response?.status;
         const message = error.response?.data?.message || error.message || 'Failed to delete item';
         if (status === 401) {
-          localStorage.clear();
+          sessionStorage.clear();
           showMessage('Session expired. Please login again.', true);
           window.location.href = '/auth';
           return;

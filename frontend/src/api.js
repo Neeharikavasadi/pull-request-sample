@@ -7,13 +7,13 @@ const api = axios.create({
   },
 });
 
-const initialToken = localStorage.getItem('token');
+const initialToken = sessionStorage.getItem('token');
 if (initialToken) {
   api.defaults.headers.common.Authorization = `Bearer ${initialToken}`;
 }
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   if (token) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
@@ -25,7 +25,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      localStorage.clear();
+      sessionStorage.clear();
       // Optional: window.location.href = '/';
     }
     return Promise.reject(error);
@@ -68,7 +68,7 @@ export async function updateProduct(productId, product) {
 }
 
 export async function deleteProduct(productId) {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
   console.log('api.deleteProduct', { productId, config });
   const response = await api.delete(`/products/${productId}`, config);
@@ -102,7 +102,7 @@ export async function addCategory(category) {
 }
 
 export async function deleteCategory(categoryId) {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
   const response = await api.delete(`/categories/${categoryId}`, config);
   return response.data;
