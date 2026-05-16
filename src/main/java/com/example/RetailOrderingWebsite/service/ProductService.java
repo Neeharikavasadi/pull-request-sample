@@ -73,9 +73,17 @@ public class ProductService {
         // Add sizes if provided
         if (request.getSizes() != null && !request.getSizes().isEmpty()) {
             List<ProductSize> sizes = request.getSizes().stream()
-                    .map(sizeReq -> new ProductSize(savedProduct, sizeReq.getSize(), sizeReq.getPrice()))
+                    .map(sizeReq -> {
+                        ProductSize size = new ProductSize(savedProduct, sizeReq.getSize(), sizeReq.getPrice());
+                        size.setQuantity(sizeReq.getQuantity() != null ? sizeReq.getQuantity() : 0);
+                        return size;
+                    })
                     .collect(Collectors.toList());
             savedProduct.setSizes(productSizeRepository.saveAll(sizes));
+            
+            int totalStock = sizes.stream().mapToInt(ProductSize::getQuantity).sum();
+            savedProduct.setStockQuantity(totalStock);
+            productRepository.save(savedProduct);
         }
         
         return savedProduct;
@@ -102,9 +110,16 @@ public class ProductService {
             product.getSizes().clear();
             if (!request.getSizes().isEmpty()) {
                 List<ProductSize> newSizes = request.getSizes().stream()
-                        .map(sizeReq -> new ProductSize(product, sizeReq.getSize(), sizeReq.getPrice()))
+                        .map(sizeReq -> {
+                            ProductSize size = new ProductSize(product, sizeReq.getSize(), sizeReq.getPrice());
+                            size.setQuantity(sizeReq.getQuantity() != null ? sizeReq.getQuantity() : 0);
+                            return size;
+                        })
                         .collect(Collectors.toList());
                 product.getSizes().addAll(newSizes);
+                
+                int totalStock = newSizes.stream().mapToInt(ProductSize::getQuantity).sum();
+                product.setStockQuantity(totalStock);
             }
         }
         
@@ -136,7 +151,11 @@ public class ProductService {
     public ProductSize addProductSize(Long productId, ProductSizeRequest request) {
         Product product = getProductById(productId);
         ProductSize size = new ProductSize(product, request.getSize(), request.getPrice());
-        return productSizeRepository.save(size);
+        size.setQuantity(request.getQuantity());
+        ProductSize savedSize = productSizeRepository.save(size);
+        productSizeRepository.flush();
+        updateProductTotalStock(productId);
+        return savedSize;
     }
 
     @Transactional
@@ -145,15 +164,35 @@ public class ProductService {
                 .orElseThrow(() -> new IllegalArgumentException("Product size not found"));
         size.setSize(request.getSize());
         size.setPrice(request.getPrice());
-        return productSizeRepository.save(size);
+        size.setQuantity(request.getQuantity());
+        ProductSize savedSize = productSizeRepository.save(size);
+        productSizeRepository.flush();
+        updateProductTotalStock(size.getProduct().getId());
+        return savedSize;
     }
 
     @Transactional
     public void deleteProductSize(Long sizeId) {
-        if (!productSizeRepository.existsById(sizeId)) {
-            throw new IllegalArgumentException("Product size not found");
-        }
+        ProductSize size = productSizeRepository.findById(sizeId)
+                .orElseThrow(() -> new IllegalArgumentException("Product size not found"));
+        Long productId = size.getProduct().getId();
         productSizeRepository.deleteById(sizeId);
+        productSizeRepository.flush();
+        updateProductTotalStock(productId);
+    }
+
+    private void updateProductTotalStock(Long productId) {
+        List<ProductSize> allSizes = productSizeRepository.findByProductId(productId);
+        Product product = getProductById(productId);
+        if (!allSizes.isEmpty()) {
+            int total = allSizes.stream()
+                    .mapToInt(s -> s.getQuantity() != null ? s.getQuantity() : 0)
+                    .sum();
+            product.setStockQuantity(total);
+        } else {
+            product.setStockQuantity(0);
+        }
+        productRepository.save(product);
     }
 
     @Transactional(readOnly = true)

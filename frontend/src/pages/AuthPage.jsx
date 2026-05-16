@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { login, register } from '../api';
+import { saveAuthData } from '../utils/auth';
 
 function AuthPage() {
   const [username, setUsername] = useState('');
@@ -20,11 +21,7 @@ function AuthPage() {
         setPassword('');
       } else {
         const response = await login(payload);
-        localStorage.setItem('userId', response.userId);
-        localStorage.setItem('username', response.username);
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('loyaltyPoints', response.loyaltyPoints || 0);
-        localStorage.setItem('role', response.role);
+        saveAuthData(response);
         setMessage(response.message);
         setTimeout(() => {
           if (response.role === 'ROLE_ADMIN') {

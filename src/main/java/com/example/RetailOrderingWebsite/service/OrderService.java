@@ -6,6 +6,7 @@ import com.example.RetailOrderingWebsite.model.Cart;
 import com.example.RetailOrderingWebsite.model.CartItem;
 import com.example.RetailOrderingWebsite.model.Order;
 import com.example.RetailOrderingWebsite.model.OrderItem;
+import com.example.RetailOrderingWebsite.model.ProductSize;
 import com.example.RetailOrderingWebsite.model.User;
 import com.example.RetailOrderingWebsite.repository.OrderRepository;
 import org.springframework.stereotype.Service;
@@ -60,7 +61,13 @@ public class OrderService {
         BigDecimal calculatedTotal = BigDecimal.ZERO;
         for (CartItem cartItem : cart.getItems()) {
             com.example.RetailOrderingWebsite.model.Product product = cartItem.getProduct();
-            if (product.getStockQuantity() < cartItem.getQuantity()) {
+            if (cartItem.getSizeId() != null) {
+                ProductSize size = productSizeRepository.findById(cartItem.getSizeId())
+                        .orElseThrow(() -> new IllegalArgumentException("Size not found for " + product.getName()));
+                if (size.getQuantity() < cartItem.getQuantity()) {
+                    throw new IllegalArgumentException("Insufficient stock for " + product.getName() + " (" + size.getSize() + ")");
+                }
+            } else if (product.getStockQuantity() < cartItem.getQuantity()) {
                 throw new IllegalArgumentException("Insufficient stock for " + product.getName());
             }
         }
@@ -69,6 +76,13 @@ public class OrderService {
             com.example.RetailOrderingWebsite.model.Product product = cartItem.getProduct();
             product.setStockQuantity(product.getStockQuantity() - cartItem.getQuantity());
             productRepository.save(product);
+
+            if (cartItem.getSizeId() != null) {
+                ProductSize size = productSizeRepository.findById(cartItem.getSizeId())
+                        .orElseThrow(() -> new IllegalArgumentException("Size not found for " + product.getName()));
+                size.setQuantity(size.getQuantity() - cartItem.getQuantity());
+                productSizeRepository.save(size);
+            }
 
             BigDecimal itemPrice = cartItem.getPrice() != null ? cartItem.getPrice() : product.getPrice();
             BigDecimal itemTotal = itemPrice.multiply(BigDecimal.valueOf(cartItem.getQuantity()));

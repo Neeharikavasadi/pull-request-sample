@@ -141,13 +141,6 @@ function HomePage() {
     return product.stockQuantity <= 10;
   };
 
-  const getTotalStock = (product) => {
-    if (product.sizes && product.sizes.length > 0) {
-      return product.sizes.reduce((sum, s) => sum + (s.quantity ?? 0), 0);
-    }
-    return product.stockQuantity ?? 0;
-  };
-
   const handleAddToCart = async (product) => {
     if (!userId) {
       setMessage('Please login to add items to the cart.');
@@ -300,7 +293,6 @@ function HomePage() {
 
             <p>{product.description}</p>
             <p className="price">₹{product.price.toFixed(2)}</p>
-            <p className="available" style={{ fontWeight: 600, color: getTotalStock(product) < 10 ? '#b91c1c' : 'inherit' }}>Available: {getTotalStock(product)}</p>
             {cartEntry ? (
               <div className="product-quantity-controls">
                 <button

@@ -32,7 +32,7 @@ function AdminPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', description: '', price: '', categoryId: '', brand: '', packaging: '', stockQuantity: 0, imageUrl: '', sizes: []
+    name: '', description: '', price: '', categoryId: '', brand: '', packaging: '', stockQuantity: 0, imageUrl: '', sizes: [], manageSizes: false
   });
   const [selectedFile, setSelectedFile] = useState(null);
 
@@ -40,9 +40,9 @@ function AdminPage() {
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [sizeModalProductId, setSizeModalProductId] = useState(null);
   const [productSizes, setProductSizes] = useState([]);
-  const [newSize, setNewSize] = useState({ size: '', price: '' });
+  const [newSize, setNewSize] = useState({ size: '', price: '', quantity: '' });
   const [editingSizeId, setEditingSizeId] = useState(null);
-  const [editingSizeData, setEditingSizeData] = useState({ size: '', price: '' });
+  const [editingSizeData, setEditingSizeData] = useState({ size: '', price: '', quantity: '' });
 
   // Coupon Management State
   const [showCouponModal, setShowCouponModal] = useState(false);
@@ -57,7 +57,7 @@ function AdminPage() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
-    if (tab && ['inventory', 'orders', 'coupons'].includes(tab)) {
+    if (tab && ['inventory', 'orders', 'coupons', 'low_stock'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [location]);
@@ -135,7 +135,10 @@ function AdminPage() {
     }
   };
 
-  const handleFormChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
+  };
 
   const openForm = (product = null) => {
     setSelectedFile(null);
@@ -145,12 +148,13 @@ function AdminPage() {
       setFormData({
         name: product.name, description: product.description, price: product.price,
         categoryId: cat ? cat.id : (categories[0]?.id || ''), brand: product.brand || '',
-        packaging: product.packaging || '', stockQuantity: product.stockQuantity, imageUrl: product.imageUrl || '', sizes: product.sizes || []
+        packaging: product.packaging || '', stockQuantity: product.stockQuantity, imageUrl: product.imageUrl || '', sizes: product.sizes || [],
+        manageSizes: product.sizes && product.sizes.length > 0
       });
     } else {
       setEditingProductId(null);
       setFormData({
-        name: '', description: '', price: '', categoryId: categories[0]?.id || '', brand: '', packaging: '', stockQuantity: 0, imageUrl: '', sizes: []
+        name: '', description: '', price: '', categoryId: categories[0]?.id || '', brand: '', packaging: '', stockQuantity: 0, imageUrl: '', sizes: [], manageSizes: false
       });
     }
     setShowForm(true);
@@ -159,7 +163,7 @@ function AdminPage() {
   // Size Management Handlers
   const openSizeModal = async (productId) => {
     setSizeModalProductId(productId);
-    setNewSize({ size: '', price: '' });
+    setNewSize({ size: '', price: '', quantity: '' });
     setEditingSizeId(null);
     try {
       const sizes = await getProductSizes(productId);
@@ -174,21 +178,22 @@ function AdminPage() {
     setShowSizeModal(false);
     setSizeModalProductId(null);
     setProductSizes([]);
-    setNewSize({ size: '', price: '' });
+    setNewSize({ size: '', price: '', quantity: '' });
     setEditingSizeId(null);
   };
 
   const handleAddSize = async () => {
-    if (!newSize.size || !newSize.price) {
+    if (!newSize.size || !newSize.price || newSize.quantity === '') {
       showMessage('Please fill in all size fields', true);
       return;
     }
     try {
-      await addProductSize(sizeModalProductId, { size: newSize.size, price: parseFloat(newSize.price) });
+      await addProductSize(sizeModalProductId, { size: newSize.size, price: parseFloat(newSize.price), quantity: parseInt(newSize.quantity, 10) });
       showMessage('Size added successfully');
-      setNewSize({ size: '', price: '' });
+      setNewSize({ size: '', price: '', quantity: '' });
       const sizes = await getProductSizes(sizeModalProductId);
       setProductSizes(sizes || []);
+      loadData();
     } catch (error) {
       showMessage('Failed to add size', true);
     }
@@ -196,20 +201,21 @@ function AdminPage() {
 
   const handleEditSize = (size) => {
     setEditingSizeId(size.id);
-    setEditingSizeData({ size: size.size, price: size.price });
+    setEditingSizeData({ size: size.size, price: size.price, quantity: size.quantity });
   };
 
   const handleSaveEditSize = async () => {
-    if (!editingSizeData.size || !editingSizeData.price) {
+    if (!editingSizeData.size || !editingSizeData.price || editingSizeData.quantity === '') {
       showMessage('Please fill in all size fields', true);
       return;
     }
     try {
-      await updateProductSize(editingSizeId, { size: editingSizeData.size, price: parseFloat(editingSizeData.price) });
+      await updateProductSize(editingSizeId, { size: editingSizeData.size, price: parseFloat(editingSizeData.price), quantity: parseInt(editingSizeData.quantity, 10) });
       showMessage('Size updated successfully');
       setEditingSizeId(null);
       const sizes = await getProductSizes(sizeModalProductId);
       setProductSizes(sizes || []);
+      loadData();
     } catch (error) {
       showMessage('Failed to update size', true);
     }
@@ -222,6 +228,7 @@ function AdminPage() {
         showMessage('Size deleted successfully');
         const sizes = await getProductSizes(sizeModalProductId);
         setProductSizes(sizes || []);
+        loadData();
       } catch (error) {
         showMessage('Failed to delete size', true);
       }
@@ -235,8 +242,14 @@ function AdminPage() {
         ...formData,
         price: parseFloat(formData.price),
         categoryId: parseInt(formData.categoryId, 10),
-        stockQuantity: parseInt(formData.stockQuantity, 10)
+        stockQuantity: formData.manageSizes ? 0 : parseInt(formData.stockQuantity, 10)
       };
+
+      if (!formData.manageSizes) {
+        payload.sizes = [];
+      } else {
+        delete payload.sizes;
+      }
 
       let savedProduct;
       if (editingProductId) {
@@ -318,7 +331,14 @@ function AdminPage() {
   };
 
   // --- Calculations ---
-  const lowStockCount = products.filter(p => p.stockQuantity < 10).length;
+  const isLowStock = (product) => {
+    if (product.sizes && product.sizes.length > 0) {
+      return product.sizes.some(size => size.quantity <= 10);
+    }
+    return product.stockQuantity <= 10;
+  };
+
+  const lowStockCount = products.filter(isLowStock).length;
   const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
 
   return (
@@ -330,12 +350,17 @@ function AdminPage() {
         <button className="admin-sidebar-btn" onClick={() => navigate('/admin/categories')}>🗂️ Manage Categories</button>
         <button className={`admin-sidebar-btn ${activeTab === 'coupons' ? 'active' : ''}`} onClick={() => setActiveTab('coupons')}>🎟️ Coupons</button>
         <button className={`admin-sidebar-btn ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>🛒 Orders</button>
+        <button className={`admin-sidebar-btn ${activeTab === 'low_stock' ? 'active' : ''}`} onClick={() => setActiveTab('low_stock')}>⚠️ Low Stock</button>
       </aside>
 
       {/* MAIN CONTENT */}
       <main className="admin-main-content">
         <header className="admin-header">
-          <h1>{activeTab === 'inventory' ? 'Inventory Management' : 'Customer Orders'}</h1>
+          <h1>
+            {activeTab === 'inventory' ? 'Inventory Management' : 
+             activeTab === 'orders' ? 'Customer Orders' :
+             activeTab === 'low_stock' ? 'Low Stock Management' : 'Coupons'}
+          </h1>
           {activeTab === 'inventory' && (
             <button type="button" className="primary" onClick={() => openForm(null)}>+ New Food Item</button>
           )}
@@ -385,13 +410,13 @@ function AdminPage() {
                 </thead>
                 <tbody>
                   {products.map(product => (
-                    <tr key={product.id}>
+                    <tr key={product.id} style={isLowStock(product) ? { backgroundColor: '#fee2e2' } : {}}>
                       <td style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         {product.imageUrl && (
                           <img src={product.imageUrl.startsWith('/uploads') ? `http://localhost:8083${product.imageUrl}` : product.imageUrl} alt={product.name} style={{ width: '45px', height: '45px', borderRadius: '10px', objectFit: 'cover' }} />
                         )}
                         <div>
-                          <div style={{ fontWeight: '600' }}>{product.name}</div>
+                          <div style={{ fontWeight: '600', color: isLowStock(product) ? '#b91c1c' : 'inherit' }}>{product.name}</div>
 
                         </div>
                       </td>
@@ -400,14 +425,21 @@ function AdminPage() {
                       <td>{product.brand || '—'}</td>
                       <td>{product.packaging || '—'}</td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span className={`stock-badge ${product.stockQuantity < 10 ? 'low-stock' : ''}`} style={{ width: '30px' }}>
-                            {product.stockQuantity}
-                          </span>
-                          <input type="number" min="1" placeholder="+Qty" style={{ width: '60px', padding: '0.4rem', borderRadius: '6px' }}
-                            value={stockInputs[product.id] || ''} onChange={(e) => handleStockChange(product.id, e.target.value)} />
-                            <button type="button" className="action-btn upload" onClick={() => handleAddStock(product.id)}>Add</button>
+                        {product.sizes && product.sizes.length > 0 ? (
+                          <div>
+                            <span className="stock-badge" style={{ width: 'auto', padding: '0 8px' }}>Total: {product.stockQuantity}</span>
+                            <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>Managed in Sizes</div>
                           </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span className={`stock-badge ${product.stockQuantity <= 10 ? 'low-stock' : ''}`} style={{ width: '30px' }}>
+                              {product.stockQuantity}
+                            </span>
+                            <input type="number" min="1" placeholder="+Qty" style={{ width: '60px', padding: '0.4rem', borderRadius: '6px' }}
+                              value={stockInputs[product.id] || ''} onChange={(e) => handleStockChange(product.id, e.target.value)} />
+                              <button type="button" className="action-btn upload" onClick={() => handleAddStock(product.id)}>Add</button>
+                          </div>
+                        )}
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <button type="button" className="action-btn edit" onClick={() => openForm(product)} style={{ marginRight: '0.5rem' }}>Edit</button>
@@ -422,6 +454,67 @@ function AdminPage() {
             </div>
 
           </>
+          )}
+
+          {/* LOW STOCK TAB */}
+          {activeTab === 'low_stock' && (
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+              <div className="table-responsive">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Category</th>
+                      <th>Stock Details</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.filter(isLowStock).map(product => (
+                      <tr key={product.id} style={{ backgroundColor: '#fee2e2' }}>
+                        <td style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          {product.imageUrl && (
+                            <img src={product.imageUrl.startsWith('/uploads') ? `http://localhost:8083${product.imageUrl}` : product.imageUrl} alt={product.name} style={{ width: '45px', height: '45px', borderRadius: '10px', objectFit: 'cover' }} />
+                          )}
+                          <div style={{ fontWeight: '600', color: '#b91c1c' }}>{product.name}</div>
+                        </td>
+                        <td style={{ color: '#b91c1c' }}>{product.category || 'Uncategorized'}</td>
+                        <td>
+                          {product.sizes && product.sizes.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {product.sizes.map(s => (
+                                <div key={s.id} style={{ color: s.quantity <= 10 ? '#dc2626' : '#7f1d1d', fontWeight: s.quantity <= 10 ? 'bold' : 'normal' }}>
+                                  {s.size}: {s.quantity} {s.quantity <= 10 && '(Low)'}
+                                </div>
+                              ))}
+                              <div style={{ fontSize: '0.85rem', color: '#991b1b', marginTop: '4px' }}>Total Stock: {product.stockQuantity}</div>
+                            </div>
+                          ) : (
+                            <div style={{ color: '#dc2626', fontWeight: 'bold' }}>
+                              Quantity: {product.stockQuantity} (Low)
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          {product.sizes && product.sizes.length > 0 ? (
+                            <button type="button" className="action-btn edit" onClick={() => openSizeModal(product.id)}>Update Sizes</button>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                              <input type="number" min="1" placeholder="+Qty" style={{ width: '60px', padding: '0.4rem', borderRadius: '6px', border: '1px solid #f87171' }}
+                                value={stockInputs[product.id] || ''} onChange={(e) => handleStockChange(product.id, e.target.value)} />
+                              <button type="button" className="action-btn upload" style={{ backgroundColor: '#dc2626' }} onClick={() => handleAddStock(product.id)}>Add</button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {products.filter(isLowStock).length === 0 && (
+                      <tr><td colSpan="4" className="text-center">No low stock items.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           {/* ORDERS TAB */}
@@ -520,10 +613,23 @@ function AdminPage() {
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Initial Stock</label>
-                  <input required type="number" name="stockQuantity" value={formData.stockQuantity} onChange={handleFormChange} />
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '1.5rem' }}>
+                  <input 
+                    type="checkbox" 
+                    id="manageSizes" 
+                    name="manageSizes" 
+                    checked={formData.manageSizes} 
+                    onChange={handleFormChange} 
+                    style={{ width: 'auto' }}
+                  />
+                  <label htmlFor="manageSizes" style={{ margin: 0, fontWeight: '500' }}>Manage item sizes?</label>
                 </div>
+                {!formData.manageSizes && (
+                  <div className="form-group">
+                    <label>Initial Stock</label>
+                    <input required type="number" name="stockQuantity" value={formData.stockQuantity} onChange={handleFormChange} />
+                  </div>
+                )}
                 <div className="form-group">
                   <label>Brand (Optional)</label>
                   <input type="text" name="brand" value={formData.brand} onChange={handleFormChange} />
@@ -585,6 +691,16 @@ function AdminPage() {
                     onChange={(e) => setNewSize({ ...newSize, price: e.target.value })}
                   />
                 </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '0.85rem' }}>Quantity Available</label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    placeholder="0" 
+                    value={newSize.quantity} 
+                    onChange={(e) => setNewSize({ ...newSize, quantity: e.target.value })}
+                  />
+                </div>
                 <button type="button" className="primary" onClick={handleAddSize} style={{ padding: '0.5rem 1rem' }}>Add Size</button>
               </div>
             </div>
@@ -597,7 +713,7 @@ function AdminPage() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {productSizes.map(size => (
-                    <div key={size.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+                    <div key={size.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: size.quantity <= 10 ? '#fca5a5' : '#fff', border: size.quantity <= 10 ? '2px solid #dc2626' : '1px solid #e5e7eb', borderRadius: '8px' }}>
                       {editingSizeId === size.id ? (
                         <>
                           <input 
@@ -613,13 +729,21 @@ function AdminPage() {
                             onChange={(e) => setEditingSizeData({ ...editingSizeData, price: e.target.value })}
                             style={{ width: '120px', padding: '0.5rem', borderRadius: '6px', border: '1px solid #d1d5db' }}
                           />
+                          <input 
+                            type="number" 
+                            min="0" 
+                            value={editingSizeData.quantity} 
+                            onChange={(e) => setEditingSizeData({ ...editingSizeData, quantity: e.target.value })}
+                            style={{ width: '100px', padding: '0.5rem', borderRadius: '6px', border: '1px solid #d1d5db' }}
+                          />
                           <button type="button" className="primary" onClick={handleSaveEditSize} style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>Save</button>
                           <button type="button" onClick={() => setEditingSizeId(null)} style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
                         </>
                       ) : (
                         <>
-                          <span style={{ flex: 1, fontWeight: '500' }}>{size.size}</span>
+                          <span style={{ flex: 1, fontWeight: '500', color: size.quantity <= 10 ? '#991b1b' : 'inherit' }}>{size.size}</span>
                           <span style={{ fontWeight: '600', minWidth: '80px', textAlign: 'right' }}>₹{size.price.toFixed(2)}</span>
+                          <span style={{ color: size.quantity <= 10 ? '#991b1b' : '#6b7280', minWidth: '90px', textAlign: 'right', fontWeight: size.quantity <= 10 ? 'bold' : 'normal' }}>Qty: {size.quantity}</span>
                           <button type="button" className="action-btn edit" onClick={() => handleEditSize(size)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>Edit</button>
                           <button type="button" className="action-btn delete" onClick={() => handleDeleteSize(size.id)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>Delete</button>
                         </>

@@ -1,5 +1,7 @@
 package com.example.RetailOrderingWebsite.dto;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public class ProductSizeRequest {
@@ -7,12 +9,17 @@ public class ProductSizeRequest {
     private String size;
     private BigDecimal price;
 
+    @NotNull
+    @Min(0)
+    private Integer quantity;
+
     public ProductSizeRequest() {
     }
 
-    public ProductSizeRequest(String size, BigDecimal price) {
+    public ProductSizeRequest(String size, BigDecimal price, Integer quantity) {
         this.size = size;
         this.price = price;
+        this.quantity = quantity;
     }
 
     public String getSize() {
@@ -29,5 +36,13 @@ public class ProductSizeRequest {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
 }

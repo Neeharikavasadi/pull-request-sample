@@ -7,14 +7,16 @@ public class ProductSizeResponse {
     private Long id;
     private String size;
     private BigDecimal price;
+    private Integer quantity;
 
     public ProductSizeResponse() {
     }
 
-    public ProductSizeResponse(Long id, String size, BigDecimal price) {
+    public ProductSizeResponse(Long id, String size, BigDecimal price, Integer quantity) {
         this.id = id;
         this.size = size;
         this.price = price;
+        this.quantity = quantity;
     }
 
     public Long getId() {
@@ -39,5 +41,13 @@ public class ProductSizeResponse {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
 }

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { fetchOrders, addToCart, markOrderReceived } from '../api';
+import { getStoredUserId } from '../utils/auth';
 
 function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState('');
-  const userId = localStorage.getItem('userId');
+  const userId = getStoredUserId();
 
   useEffect(() => {
     if (userId) {

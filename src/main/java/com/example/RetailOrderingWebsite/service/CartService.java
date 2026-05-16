@@ -52,7 +52,13 @@ public class CartService {
                 .orElse(null);
 
         if (item == null) {
-            if (request.getQuantity() > product.getStockQuantity()) {
+            if (request.getSizeId() != null) {
+                ProductSize size = productSizeRepository.findById(request.getSizeId())
+                        .orElseThrow(() -> new IllegalArgumentException("Size not found"));
+                if (request.getQuantity() > size.getQuantity()) {
+                    throw new IllegalArgumentException("Requested quantity exceeds available size stock");
+                }
+            } else if (request.getQuantity() > product.getStockQuantity()) {
                 throw new IllegalArgumentException("Requested quantity exceeds available stock");
             }
             BigDecimal price = product.getPrice();
@@ -65,7 +71,13 @@ public class CartService {
             cart.getItems().add(item);
         } else {
             int updatedQuantity = item.getQuantity() + request.getQuantity();
-            if (updatedQuantity > product.getStockQuantity()) {
+            if (item.getSizeId() != null) {
+                ProductSize size = productSizeRepository.findById(item.getSizeId())
+                        .orElseThrow(() -> new IllegalArgumentException("Size not found"));
+                if (updatedQuantity > size.getQuantity()) {
+                    throw new IllegalArgumentException("Requested quantity exceeds available size stock");
+                }
+            } else if (updatedQuantity > product.getStockQuantity()) {
                 throw new IllegalArgumentException("Requested quantity exceeds available stock");
             }
             item.setQuantity(updatedQuantity);
@@ -111,9 +123,17 @@ public class CartService {
                 .orElseThrow(() -> new IllegalArgumentException("Cart item not found"));
 
         int updatedQuantity = item.getQuantity() + delta;
-        if (updatedQuantity > item.getProduct().getStockQuantity()) {
+        if (item.getSizeId() != null) {
+            ProductSize size = productSizeRepository.findById(item.getSizeId())
+                    .orElseThrow(() -> new IllegalArgumentException("Size not found"));
+            if (updatedQuantity > size.getQuantity()) {
+                throw new IllegalArgumentException("Requested quantity exceeds available size stock");
+            }
+        } else if (updatedQuantity > item.getProduct().getStockQuantity()) {
             throw new IllegalArgumentException("Requested quantity exceeds available stock");
-        } else if (updatedQuantity <= 0) {
+        }
+
+        if (updatedQuantity <= 0) {
             cart.getItems().remove(item);
             cartItemRepository.delete(item);
         } else {

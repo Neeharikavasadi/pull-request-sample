@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { addToCart, fetchCart, removeCartItem, placeOrder, updateCartItemQuantity, validateCoupon } from '../api';
+import { getStoredUserId } from '../utils/auth';
 
 function CartPage() {
   const [cart, setCart] = useState({ items: [], totalPrice: 0 });
@@ -8,7 +9,7 @@ function CartPage() {
   const [couponCode, setCouponCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [pointsRedeemed, setPointsRedeemed] = useState(0);
-  const userId = localStorage.getItem('userId');
+  const userId = getStoredUserId();
   const availablePoints = Number(localStorage.getItem('loyaltyPoints') || 0);
 
   useEffect(() => {

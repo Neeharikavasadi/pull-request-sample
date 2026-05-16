@@ -23,6 +23,9 @@ public class ProductSize {
     @Column(nullable = false)
     private BigDecimal price;
 
+    @Column(nullable = false, columnDefinition = "int default 0")
+    private Integer quantity = 0;
+
     public ProductSize() {
     }
 
@@ -62,5 +65,13 @@ public class ProductSize {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
 }

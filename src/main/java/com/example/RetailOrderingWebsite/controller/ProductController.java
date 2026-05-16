@@ -167,7 +167,7 @@ public class ProductController {
         try {
             List<ProductSize> sizes = productService.getProductSizes(productId);
             List<ProductSizeResponse> sizeResponses = sizes.stream()
-                    .map(size -> new ProductSizeResponse(size.getId(), size.getSize(), size.getPrice()))
+                    .map(size -> new ProductSizeResponse(size.getId(), size.getSize(), size.getPrice(), size.getQuantity()))
                     .collect(Collectors.toList());
             return ResponseEntity.ok(sizeResponses);
         } catch (IllegalArgumentException ex) {
@@ -180,7 +180,7 @@ public class ProductController {
         try {
             authorizationService.validateAdminAccess();
             ProductSize size = productService.addProductSize(productId, request);
-            ProductSizeResponse response = new ProductSizeResponse(size.getId(), size.getSize(), size.getPrice());
+            ProductSizeResponse response = new ProductSizeResponse(size.getId(), size.getSize(), size.getPrice(), size.getQuantity());
             return ResponseEntity.ok(response);
         } catch (org.springframework.security.access.AccessDeniedException ex) {
             return ResponseEntity.status(403).body(new com.example.RetailOrderingWebsite.dto.MessageResponse(ex.getMessage()));
@@ -194,7 +194,7 @@ public class ProductController {
         try {
             authorizationService.validateAdminAccess();
             ProductSize size = productService.updateProductSize(sizeId, request);
-            ProductSizeResponse response = new ProductSizeResponse(size.getId(), size.getSize(), size.getPrice());
+            ProductSizeResponse response = new ProductSizeResponse(size.getId(), size.getSize(), size.getPrice(), size.getQuantity());
             return ResponseEntity.ok(response);
         } catch (org.springframework.security.access.AccessDeniedException ex) {
             return ResponseEntity.status(403).body(new com.example.RetailOrderingWebsite.dto.MessageResponse(ex.getMessage()));
@@ -219,7 +219,7 @@ public class ProductController {
     private ProductResponse mapToResponse(Product product) {
         List<ProductSizeResponse> sizeResponses = product.getSizes() != null ?
                 product.getSizes().stream()
-                        .map(size -> new ProductSizeResponse(size.getId(), size.getSize(), size.getPrice()))
+                        .map(size -> new ProductSizeResponse(size.getId(), size.getSize(), size.getPrice(), size.getQuantity()))
                         .collect(Collectors.toList())
                 : List.of();
 
